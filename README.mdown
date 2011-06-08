@@ -25,14 +25,14 @@ The Cassandra and Keyspace objects are designed to be long-lived and should only
 
 With this all setup, let's insert some data:
 
-> Row row = new Row();
-> row.put("column1","value1");
-> row.put("column2","value2");
-> columnFamily.insert(row);
+> Row row = new Row();    
+> row.put("column1","value1");   
+> row.put("column2","value2");    
+> columnFamily.insert(row);    
 
 The above code created a row with an automatically generated key and inserted two columns. To read the values, we can issue a query based on the above row:
 
-> CFCursor cursor = columnFamily.query(row);
+> CFCursor cursor = columnFamily.query(row);    
 > Row foundRow = cursor.next();
 
 The foundRow object above should identical columns to the original inserted row. 
