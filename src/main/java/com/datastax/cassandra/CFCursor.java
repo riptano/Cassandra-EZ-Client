@@ -1,15 +1,18 @@
 package com.datastax.cassandra;
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 
+import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.service.template.ColumnFamilyResult;
+import me.prettyprint.hector.api.beans.DynamicComposite;
 
 public class CFCursor implements Iterator<Row> {
 
-  private final ColumnFamilyResult<String, String> columnFamilyResult;
+  private final ColumnFamilyResult<ByteBuffer,DynamicComposite> columnFamilyResult;
   
-  CFCursor(ColumnFamilyResult<String, String> result) {
-    this.columnFamilyResult = result;    
+  CFCursor(ColumnFamilyResult<ByteBuffer, DynamicComposite> columnFamilyResult) {
+    this.columnFamilyResult = columnFamilyResult;    
   }
   
   @Override
@@ -21,9 +24,9 @@ public class CFCursor implements Iterator<Row> {
   public Row next() {   
     // CFR is already at 1st position, JDBC style
     Row row = new Row();    
-    row.setKey(columnFamilyResult.getKey());
-    for (String columnName : columnFamilyResult.getColumnNames() ) {
-      row.put(columnName, columnFamilyResult.getString(columnName));
+    row.setKey(StringSerializer.get().fromByteBuffer(columnFamilyResult.getKey()));
+    for (DynamicComposite columnName : columnFamilyResult.getColumnNames() ) {
+      row.put(columnName, columnFamilyResult.getColumn(columnName).getValue());
     }
     if ( columnFamilyResult.hasNext() )
       columnFamilyResult.next();

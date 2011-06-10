@@ -1,41 +1,47 @@
 package com.datastax.cassandra;
 
+import java.nio.ByteBuffer;
+import java.util.Map;
+
 import me.prettyprint.cassandra.model.ExecutingKeyspace;
 import me.prettyprint.cassandra.model.MutatorImpl;
+import me.prettyprint.cassandra.serializers.ByteBufferSerializer;
+import me.prettyprint.cassandra.serializers.DynamicCompositeSerializer;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.service.template.ColumnFamilyTemplate;
+import me.prettyprint.cassandra.service.template.ColumnFamilyUpdater;
 import me.prettyprint.cassandra.service.template.ThriftColumnFamilyTemplate;
+import me.prettyprint.hector.api.beans.DynamicComposite;
 import me.prettyprint.hector.api.beans.HColumn;
 
 public class ColumnFamily {
 
   private final ExecutingKeyspace keyspace;
   private final String columnFamilyName;
-  private final MutatorImpl<String> mutator;
-  private final ColumnFamilyTemplate<String, String> columnFamilyTemplate;
+  private final ColumnFamilyTemplate<ByteBuffer,DynamicComposite> columnFamilyTemplate;
+  
+  private static final DynamicCompositeSerializer dcs = new DynamicCompositeSerializer();
   
   ColumnFamily(String columnFamilyName, ExecutingKeyspace keyspace) {
     this.columnFamilyName = columnFamilyName;
-    this.keyspace = keyspace;
-    this.mutator = new MutatorImpl<String>(keyspace);
+    this.keyspace = keyspace;    
     this.columnFamilyTemplate = 
-      new ThriftColumnFamilyTemplate<String, String>(keyspace, 
+      new ThriftColumnFamilyTemplate<ByteBuffer,DynamicComposite>(keyspace, 
           columnFamilyName, 
-          StringSerializer.get(), 
-          StringSerializer.get());
+          ByteBufferSerializer.get(), 
+          dcs);
   }
   
   public void insert(Row row) {
-    // for HColumn : row.columns
-    for (HColumn<String, String> column : row.getColumns() ) {
-      mutator.addInsertion(row.getKey(), columnFamilyName, column);
+
+    for (Map.Entry<ByteBuffer,HColumn<DynamicComposite,ByteBuffer>> entry : row.getColumns().entrySet() ) {
+      columnFamilyTemplate.getMutator().addInsertion(row.getKeyBytes(), columnFamilyName, entry.getValue());
     }
-    mutator.execute();
-    mutator.discardPendingMutations();
+    columnFamilyTemplate.executeBatch();
   }
   
   public CFCursor query(Row row) {
-    CFCursor cursor = new CFCursor(columnFamilyTemplate.queryColumns(row.getKey()));         
+    CFCursor cursor = new CFCursor(columnFamilyTemplate.queryColumns(row.getKeyBytes()));         
     return cursor;
   }
 }
