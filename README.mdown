@@ -37,5 +37,21 @@ The above code created a row with an automatically generated key and inserted tw
 
 The foundRow object above should identical columns to the original inserted row. 
 
+For data with multiple types, convenience methods provide an easy way to retrieve objects from the row. Given the following insertion code:
+
+> Row row = new Row();    
+> row.put("column1", "value1");    
+> row.put(2, "value2");    
+> row.put(3, false);    
+> columnFamily.insert(row);   
+
+You can retrieve the values like so:
+
+> String value1 = foundRow.getString("column1");    
+> String value2 = foundRow.getString(2);    
+> boolean value3 = foundRow.getBoolean(3);    
+
+
+
 
 

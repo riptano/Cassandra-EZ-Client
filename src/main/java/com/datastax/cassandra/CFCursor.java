@@ -26,7 +26,7 @@ public class CFCursor implements Iterator<Row> {
     Row row = new Row();    
     row.setKey(StringSerializer.get().fromByteBuffer(columnFamilyResult.getKey()));
     for (DynamicComposite columnName : columnFamilyResult.getColumnNames() ) {
-      row.put(columnName, columnFamilyResult.getColumn(columnName).getValue());
+      row.put(columnName, columnFamilyResult.getColumn(columnName));
     }
     if ( columnFamilyResult.hasNext() )
       columnFamilyResult.next();

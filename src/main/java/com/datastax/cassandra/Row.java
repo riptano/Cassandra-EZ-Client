@@ -1,8 +1,10 @@
 package com.datastax.cassandra;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -47,23 +49,40 @@ public class Row {
   public Row put(Object columnName, Object columnValue) {
     DynamicComposite dColName = new DynamicComposite();
     dColName.add(0,columnName);
-    DynamicComposite dColValue = new DynamicComposite();
-    dColValue.add(0, columnValue);
-    columnMap.put(dColName.getComponent(0).getBytes(), 
-        new HColumnImpl<DynamicComposite, ByteBuffer>(dColName, 
-            dColValue.getComponent(0).getBytes(), 
-            clockResolution.createClock(), dcs, ByteBufferSerializer.get()));
+    if ( columnValue != null ) {
+      DynamicComposite dColValue = new DynamicComposite();
+      dColValue.add(0, columnValue);
+      columnMap.put(dColName.getComponent(0).getBytes(), 
+          new HColumnImpl<DynamicComposite, ByteBuffer>(dColName, 
+              dColValue.getComponent(0).getBytes(), 
+              clockResolution.createClock(), dcs, ByteBufferSerializer.get()));
+    } else {
+      columnMap.put(dColName.getComponent(0).getBytes(), 
+          new HColumnImpl<DynamicComposite, ByteBuffer>(dColName, 
+              ByteBuffer.wrap(new byte[0]), 
+              clockResolution.createClock(), dcs, ByteBufferSerializer.get()));
+    }
     return this;
   }
     
+  public boolean hasColumns() {
+    return !columnMap.isEmpty();
+  }
   
-  void put(DynamicComposite columnName, ByteBuffer columnValue) {
-    columnMap.put(columnName.getComponent(0).getBytes(), new HColumnImpl<DynamicComposite, ByteBuffer>(columnName, columnValue, 
-        clockResolution.createClock(), dcs, ByteBufferSerializer.get()));
+  void put(DynamicComposite columnName, HColumn<DynamicComposite,ByteBuffer> column) {
+    columnMap.put(columnName.getComponent(0).getBytes(), column);
   }
   
   Map<ByteBuffer,HColumn<DynamicComposite, ByteBuffer>> getColumns() {
     return columnMap;
+  }
+    
+  List<DynamicComposite> getColumnsForQuery() {
+    List<DynamicComposite> cols = new ArrayList<DynamicComposite>(columnMap.size());
+    for (ByteBuffer buf : columnMap.keySet()) {
+      cols.add(dcs.fromByteBuffer(buf));
+    }
+    return cols;
   }
   
   String getKey() {
