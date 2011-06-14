@@ -20,9 +20,17 @@ import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.serializers.UUIDSerializer;
 import me.prettyprint.cassandra.service.clock.MicrosecondsSyncClockResolution;
 import me.prettyprint.cassandra.utils.TimeUUIDUtils;
+import me.prettyprint.hector.api.Serializer;
 import me.prettyprint.hector.api.beans.DynamicComposite;
 import me.prettyprint.hector.api.beans.HColumn;
 
+/**
+ * Models an row in an Apache Cassandra column family. Allows for 
+ * generic storage and retrieval of basic types while maintaining 
+ * type safety.
+ *  
+ * @author zznate
+ */
 public class Row {
   
   private String key;
@@ -35,17 +43,7 @@ public class Row {
     this.key = key;
     return this;
   }
-  
-  public Row put(String columnName, String columnValue) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.addComponent(columnName, StringSerializer.get());
-    columnMap.put(StringSerializer.get().toByteBuffer(columnName), 
-        new HColumnImpl<DynamicComposite, ByteBuffer>(dc, 
-            StringSerializer.get().toByteBuffer(columnValue), 
-            clockResolution.createClock(), dcs, ByteBufferSerializer.get()));
-    return this;
-  }
-  
+   
   public Row put(Object columnName, Object columnValue) {
     DynamicComposite dColName = new DynamicComposite();
     dColName.add(0,columnName);
@@ -68,11 +66,48 @@ public class Row {
   public boolean hasColumns() {
     return !columnMap.isEmpty();
   }
-  
-  void put(DynamicComposite columnName, HColumn<DynamicComposite,ByteBuffer> column) {
-    columnMap.put(columnName.getComponent(0).getBytes(), column);
+   
+  public String getString(Object columnName) {
+    return get(StringSerializer.get(), columnName);
   }
   
+  public int getInt(Object columnName) {
+    return get(IntegerSerializer.get(), columnName);
+  }
+  
+  public long getLong(Object columnName) {
+    return get(LongSerializer.get(), columnName);
+  }
+  
+  public Date getDate(Object columnName) {
+    return get(DateSerializer.get(), columnName);
+  }
+  
+  public UUID getUUID(Object columnName) {
+    return get(UUIDSerializer.get(), columnName);
+  }
+  
+  public boolean getBoolean(Object columnName) {
+    return get(BooleanSerializer.get(), columnName);
+  }
+  
+  public byte[] getBytes(Object columnName) {
+    return get(BytesArraySerializer.get(), columnName);
+  }
+  
+  /**
+   * Generic method that preserves typing. Use this method with custom 
+   * value serializers
+   */
+  public <T> T get(Serializer<T> serializer, Object columnName) {
+    DynamicComposite dc = new DynamicComposite();
+    dc.add(0, columnName);
+    return serializer.fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
+  }
+  
+  ByteBuffer getKeyBytes() {
+    return StringSerializer.get().toByteBuffer(getKey());
+  }
   Map<ByteBuffer,HColumn<DynamicComposite, ByteBuffer>> getColumns() {
     return columnMap;
   }
@@ -80,7 +115,7 @@ public class Row {
   List<DynamicComposite> getColumnsForQuery() {
     List<DynamicComposite> cols = new ArrayList<DynamicComposite>(columnMap.size());
     for (ByteBuffer buf : columnMap.keySet()) {
-      cols.add(dcs.fromByteBuffer(buf));
+      cols.add(columnMap.get(buf).getName());
     }
     return cols;
   }
@@ -91,52 +126,7 @@ public class Row {
     return key;
   }
   
-  public String getString(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return StringSerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
+  void put(DynamicComposite columnName, HColumn<DynamicComposite,ByteBuffer> column) {
+    columnMap.put(columnName.getComponent(0).getBytes(), column);
   }
-  
-  public int getInt(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return IntegerSerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
-  }
-  
-  public long getLong(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return LongSerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
-  }
-  
-  public Date getDate(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return DateSerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
-  }
-  
-  public UUID getUUID(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return UUIDSerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
-  }
-  
-  public boolean getBoolean(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return BooleanSerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
-  }
-  
-  public byte[] getBytes(Object columnName) {
-    DynamicComposite dc = new DynamicComposite();
-    dc.add(0, columnName);
-    return BytesArraySerializer.get().fromByteBuffer(columnMap.get(dc.getComponent(0).getBytes()).getValue());
-  }
-  
-  
-  
-  ByteBuffer getKeyBytes() {
-    return StringSerializer.get().toByteBuffer(getKey());
-  }
-
 }

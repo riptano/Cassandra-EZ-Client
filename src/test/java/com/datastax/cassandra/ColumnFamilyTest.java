@@ -24,7 +24,7 @@ public class ColumnFamilyTest extends BaseCassandraTest {
     
     
     columnFamily.insert(row);   
-    
+
     CFCursor cursor = columnFamily.query(row);
     Row foundRow = cursor.next();
     assertEquals(row.getKey(), foundRow.getKey());
